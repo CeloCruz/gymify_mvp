@@ -1,4 +1,8 @@
 import streamlit as st
+
+# Set page config (must be the first Streamlit command)
+st.set_page_config(page_title="🏠 Dashboard Inicio", layout="wide")
+
 import sys
 import os
 from pathlib import Path
@@ -14,9 +18,6 @@ try:
     init_auth_tables()
 except Exception as e:
     st.error(f"Error initializing database: {e}")
-
-# Set page config
-st.set_page_config(page_title="🏠 Dashboard Inicio", layout="wide")
 
 # Check authentication
 is_authenticated, username, name, authenticator = check_authentication()
