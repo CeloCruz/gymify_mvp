@@ -62,8 +62,14 @@ def setup_authenticator():
 
 def create_user(username, name, email, password):
     """Create a new user in the database"""
-    # Hash the password
-    hashed_password = stauth.Hasher([password]).generate()[0]
+    # Hash the password - different versions of streamlit-authenticator have different APIs
+    try:
+        # For newer versions (0.2.0+)
+        hasher = stauth.Hasher()
+        hashed_password = hasher.hash(password)
+    except TypeError:
+        # For older versions
+        hashed_password = stauth.Hasher([password]).generate()[0]
 
     # Insert user into database
     try:
@@ -96,8 +102,17 @@ def login_page():
     # Set up authenticator
     authenticator = setup_authenticator()
 
-    # Display login form
-    name, authentication_status, username = authenticator.login("Login", "main")
+    # Display login form - handle different versions of streamlit-authenticator
+    try:
+        # For newer versions
+        name, authentication_status, username = authenticator.login("Login")
+    except ValueError:
+        try:
+            # For older versions that require a location
+            name, authentication_status, username = authenticator.login("Login", "main")
+        except Exception as e:
+            st.error(f"Authentication error: {e}")
+            return None, None, None, authenticator
 
     # Handle authentication status
     if authentication_status == True:
@@ -188,14 +203,20 @@ def check_authentication():
 
 def init_auth_tables():
     """Initialize authentication tables and create admin user if none exists"""
-    conn = get_db_connection()
+    try:
+        conn = get_db_connection()
 
-    # Check if users table exists and has any users
-    users = execute_query("SELECT COUNT(*) as count FROM users")
+        # Check if users table exists and has any users
+        users = execute_query("SELECT COUNT(*) as count FROM users")
 
-    # If no users exist, create admin user
-    if users[0]["count"] == 0:
-        create_user("admin", "Administrator", "admin@example.com", "admin123")
-        print("Created default admin user (username: admin, password: admin123)")
+        # If no users exist, create admin user
+        if users[0]["count"] == 0:
+            success, result = create_user("admin", "Administrator", "admin@example.com", "admin123")
+            if success:
+                print("Created default admin user (username: admin, password: admin123)")
+            else:
+                print(f"Error creating default admin user: {result}")
 
-    conn.close()
+        conn.close()
+    except Exception as e:
+        print(f"Error initializing auth tables: {e}")
