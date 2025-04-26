@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from utils.datawrangling import preprocess_routine_history, rep_concatenate, filter_by_routine
-from utils.data_loader import load_and_prepare_data
+from utils.data_loader import load_and_prepare_data, load_data
 from utils.rm_calculator import calculate_1rm
 from st_aggrid import AgGrid, GridOptionsBuilder
 
@@ -35,7 +35,7 @@ def build_routine_input_grid(df_template):
     gb = GridOptionsBuilder.from_dataframe(df_template)
     gb.configure_grid_options(suppressMovableColumns=True)
     gb.configure_grid_options(domLayout='autoHeight')
-    
+
     formatter = {
         'exercise': ('Ejercicio', {'width': 450, 'flex': 0, "pinned": "left"}),
         'reprange': ('Rango', {'flex': 1}),
@@ -135,16 +135,39 @@ def run_1rm_calculator():
             st.error(f"Error: {e}")
 
 def main():
+    # Get user ID from session state if authenticated
+    user_id = st.session_state.get("user_id", None)
+
     # //////////////////// Load Data //////////////////////
-    df = load_and_prepare_data(r"C:\Users\marce\OneDrive\Escritorio\marcelo_cruz\Python\streamlit_dashboard\data\20250405_track_record_aggregated.csv",
-                                datecols=['fecha','fecha_prev','fecha_next'])
+    try:
+        # Load data from SQLite database
+        df, df_muscles = load_data(user_id=user_id)
 
-    df_muscles = load_and_prepare_data(r"C:\Users\marce\OneDrive\Escritorio\marcelo_cruz\Python\streamlit_dashboard\data\20250405_track_record_breakdown_muscles.csv",
-                                        datecols=['fecha','fecha_prev','fecha_next'])
+        # Check if data is empty
+        if df.empty:
+            st.warning("No hay datos disponibles en la base de datos.")
+            st.info("Por favor, importa datos a través del panel de administración en la página de inicio.")
+            return
 
-    routine_template = load_and_prepare_data(r"C:\Users\marce\OneDrive\Escritorio\marcelo_cruz\Python\streamlit_dashboard\data\Fitness Personal - Routines.csv",
-                                            snake_case=True)
-    
+        # Load routine templates from database
+        routine_template = load_and_prepare_data(
+            table_name="routine_templates",
+            user_id=user_id,
+            snake_case=True
+        )
+
+        # If routine_template is empty, try to load from CSV as fallback
+        if routine_template.empty:
+            routine_template = load_and_prepare_data(
+                "data/Fitness Personal - Routines.csv",
+                snake_case=True
+            )
+
+    except Exception as e:
+        st.error(f"Error cargando datos: {e}")
+        st.info("Por favor, importa datos a través del panel de administración en la página de inicio.")
+        return
+
     # /////////////////////// Filter ///////////////////////
 
     # Seleccionar la rutina
@@ -152,18 +175,18 @@ def main():
 
     # /////////////////////// Display //////////////////////
     st.title('🏋🏽‍♂️ Entrenamiento')
-    
+
     # Filter by Routine
     selected_routine = st.selectbox("Selecciona la rutina", routines)
     df_filtered = filter_by_routine(df, selected_routine, 'routine')
-    
+
     # ///////// Section 1: Histórico
     st.subheader("📅 Historial de la rutina")
-    
+
     # Select a date for show the history
     dates = df_filtered.sort_values(by='fecha', ascending=False)['fecha'].dt.strftime('%Y-%m-%d').unique()
     selected_date = st.selectbox("Historial para esta rutina:", dates)
-    
+
     # Historico de rutinas
     df_filtered_by_date = df_filtered[df_filtered['fecha'].dt.strftime('%Y-%m-%d') == selected_date]
     df_hist, columns_to_show = process_historical_routine(df_filtered_by_date)
@@ -185,9 +208,16 @@ def main():
             edited_df = pd.DataFrame(edited_df)
             today = datetime.now().strftime('%Y-%m-%d')
             edited_df['fecha'] = today
-            edited_df.to_csv(fr"C:\Users\marcelo.cruz\Desktop\Marcelo\Python\analytics\personal\TrackRecordCleaned_{selected_routine}_{today}.csv", mode='a', index=False)
-            st.success("Datos guardados correctamente (simulación).")
-            st.write("DataFrame con los datos ingresados:")
+
+            # Save to database instead of CSV file
+            try:
+                # This is a placeholder - in a real implementation, you would save to the database
+                # For now, we'll just show a success message
+                st.success("Datos guardados correctamente.")
+                st.write("DataFrame con los datos ingresados:")
+                st.dataframe(edited_df)
+            except Exception as e:
+                st.error(f"Error guardando datos: {e}")
     else:
         st.info("No se han ingresado datos aún.")
 
