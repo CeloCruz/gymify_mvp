@@ -12,26 +12,41 @@ st.set_page_config(page_title="Análisis Muscular", layout="wide")
 st.title("Análisis Muscular")
 
 def main():
-    df, df_muscles = load_data("data/20250405_track_record_aggregated.csv", "data/20250405_track_record_breakdown_muscles.csv")
+    # Get user ID from session state if authenticated
+    user_id = st.session_state.get("user_id", None)
+
+    # Load data from SQLite database
+    df, df_muscles = load_data(user_id=user_id)
+
+    # Check if data is empty
+    if df.empty:
+        st.warning("No hay datos disponibles en la base de datos.")
+        st.info("Por favor, importa datos a través del panel de administración en la página de inicio.")
+        return
 
     # ////////////////// Filtros ////////////////////////
-    min_date, max_date = get_date_filters(df)
-    # Default range: last 6 weeks
-    today = datetime.today().date()
-    default_start = today - timedelta(weeks=6)
-    default_end = today
+    try:
+        min_date, max_date = get_date_filters(df)
+        # Default range: last 6 weeks
+        today = datetime.today().date()
+        default_start = today - timedelta(weeks=6)
+        default_end = today
 
-    # Convert Timestamp to .date()
-    min_date = min_date.date()
-    max_date = max_date.date()
+        # Convert Timestamp to .date() with NaT handling
+        min_date = min_date.date() if not pd.isna(min_date) else today
+        max_date = max_date.date() if not pd.isna(max_date) else today
 
-    # Bound defaults to data limits
-    default_start = max(default_start, min_date)
-    default_end = min(default_end, max_date)
+        # Bound defaults to data limits
+        default_start = max(default_start, min_date)
+        default_end = min(default_end, max_date)
+    except Exception as e:
+        st.error(f"Error al procesar fechas: {e}")
+        st.info("Por favor, importa datos válidos a través del panel de administración.")
+        return
 
     try:
         start_date, end_date = st.sidebar.date_input(
-            "Rango de fechas", 
+            "Rango de fechas",
             value=[default_start, default_end],
             min_value=min_date, max_value=max_date
         )
@@ -50,19 +65,19 @@ def main():
     df_muscles_prev = filter_by_date(df_muscles, prev_start, prev_end)
 
     metrics = {
-        'Series Directas': ('series_principal','sum'), 
+        'Series Directas': ('series_principal','sum'),
         'Total Series': ('series_counter','sum'),
         'Series Efectivas': ('effective_set_counter','sum'),
         'Workload': ('workload_real','sum'),
         }
-    
+
     df_processed = calculate_summary_table(
-                                        df_now=df_muscles_filtered, 
-                                        df_prev=df_muscles_prev, 
+                                        df_now=df_muscles_filtered,
+                                        df_prev=df_muscles_prev,
                                         group_col="id_muscle",
                                         metrics=metrics
                                         )
-    
+
     prev_cols = [col for col in df_processed.columns if "_prev" in col]
     df_processed.drop(columns=prev_cols, inplace=True)
     df_processed = compute_difference_between_kpis(df_processed, 'Series Efectivas', 'Total Series')
@@ -94,7 +109,7 @@ def main():
                         group_col="id_muscle",
                         title="Resumen por ejercicio (actual vs anterior)"
                         )
-    
+
     # Section 2: Effective sets and total sets
     st.subheader("💪 Análisis de series efectivas y totales")
     plot_muscle_analysis(
@@ -116,7 +131,7 @@ def main():
                         group_col="id_muscle",
                         title="Resumen por ejercicio (actual vs anterior)"
                         )
-    
+
     # Section 3: Workload
     st.subheader("💪 Análisis de carga de trabajo")
 
@@ -137,6 +152,6 @@ def main():
                         group_col="id_muscle",
                         title="Resumen por ejercicio (actual vs anterior)"
                         )
-    
+
 if __name__ == "__main__":
     main()

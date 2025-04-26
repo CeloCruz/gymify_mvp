@@ -13,26 +13,41 @@ from utils.general import format_fecha_column
 st.set_page_config(page_title="Dashboard Entrenamiento", layout="wide")
 
 def main():
-    df, df_muscles = load_data("data/20250405_track_record_aggregated.csv", "data/20250405_track_record_breakdown_muscles.csv")
-    
+    # Get user ID from session state if authenticated
+    user_id = st.session_state.get("user_id", None)
+
+    # Load data from SQLite database
+    df, df_muscles = load_data(user_id=user_id)
+
+    # Check if data is empty
+    if df.empty:
+        st.warning("No hay datos disponibles en la base de datos.")
+        st.info("Por favor, importa datos a través del panel de administración en la página de inicio.")
+        return
+
     # ////////////////// Filtros ////////////////////////
-    min_date, max_date = get_date_filters(df)
-    # Default range: last 6 weeks
-    today = datetime.today().date()
-    default_start = today - timedelta(weeks=6)
-    default_end = today
+    try:
+        min_date, max_date = get_date_filters(df)
+        # Default range: last 6 weeks
+        today = datetime.today().date()
+        default_start = today - timedelta(weeks=6)
+        default_end = today
 
-    # Convert Timestamp to .date()
-    min_date = min_date.date()
-    max_date = max_date.date()
+        # Convert Timestamp to .date() with NaT handling
+        min_date = min_date.date() if not pd.isna(min_date) else today
+        max_date = max_date.date() if not pd.isna(max_date) else today
 
-    # Bound defaults to data limits
-    default_start = max(default_start, min_date)
-    default_end = min(default_end, max_date)
+        # Bound defaults to data limits
+        default_start = max(default_start, min_date)
+        default_end = min(default_end, max_date)
+    except Exception as e:
+        st.error(f"Error al procesar fechas: {e}")
+        st.info("Por favor, importa datos válidos a través del panel de administración.")
+        return
 
     try:
         start_date, end_date = st.sidebar.date_input(
-            "Rango de fechas", 
+            "Rango de fechas",
             value=[default_start, default_end],
             min_value=min_date, max_value=max_date
         )
@@ -45,7 +60,7 @@ def main():
         st.sidebar.warning("Por favor selecciona un rango válido de fechas (inicio y fin).")
         st.write("Esperando selección de rango de fechas...")
         return
-    
+
     granularity = st.sidebar.selectbox(
         "Selecciona la granularidad",
         options=["D", "W", "M"],
@@ -117,7 +132,7 @@ def main():
     grouped = format_fecha_column(grouped, "fecha", granularity=granularity)
     col_metrics_2 = [col for col in df_aggregated_processed.columns if "prev" not in col]
     col_metrics_3 = [col for col in df_muscle_processed.columns if "prev" not in col]
-    
+
     # ////////////////// Display ///////////////////////
     st.title("📊 Dashboard de Entrenamiento")
     # Period info display
@@ -132,8 +147,8 @@ def main():
         unsafe_allow_html=True
     )
     display_kpis(
-        curr=kpis_curr,  
-        prev=kpis_prev, 
+        curr=kpis_curr,
+        prev=kpis_prev,
         labels=labels_kpis
     )
     plot_line_vs_bar(
@@ -158,7 +173,7 @@ def main():
         title="📚 Detalle por rutina"
     )
     display_summary_table(
-        df_muscle_processed[col_metrics_3], 
+        df_muscle_processed[col_metrics_3],
         group_col="id_muscle",
         title = "💪 Detalle por músculo"
     )
