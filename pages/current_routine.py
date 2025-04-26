@@ -25,7 +25,11 @@ def process_historical_routine(df):
     columns_to_show = ['Ejercicio','Rango','Reps','Peso','RIR']
     columns_to_show = [col for col in columns_to_show if col in df_hist.columns]
 
-    return df_hist, columns_to_show
+    row_height = 35  # Approx row height in pixels
+    num_rows = df_hist.shape[0]
+    height = 100 + num_rows * row_height  # 100 for header padding
+
+    return df_hist, columns_to_show, height
 
 def build_routine_input_grid(df_template):
     df_template['reps_real'] = 0
@@ -189,8 +193,8 @@ def main():
 
     # Historico de rutinas
     df_filtered_by_date = df_filtered[df_filtered['fecha'].dt.strftime('%Y-%m-%d') == selected_date]
-    df_hist, columns_to_show = process_historical_routine(df_filtered_by_date)
-    st.dataframe(df_hist[columns_to_show].set_index('Ejercicio'))
+    df_hist, columns_to_show, height = process_historical_routine(df_filtered_by_date)
+    st.dataframe(df_hist[columns_to_show].set_index('Ejercicio'), height=height)
 
     # ///////// Section 2: Ingresar Datos
     st.subheader("📥 Ingreso de rutina")
