@@ -39,10 +39,24 @@ if is_authenticated:
 
         # Database management
         with st.expander("Gestión de Base de Datos"):
+            st.info("Esta sección permite importar los datos CSV a la base de datos SQLite.")
+            st.warning("Nota: Este proceso puede tardar unos segundos y sobrescribirá los datos existentes.")
+
             if st.button("Importar datos CSV a SQLite"):
                 with st.spinner("Importando datos..."):
                     try:
+                        # Show more detailed progress
+                        progress_text = st.empty()
+                        progress_text.text("Creando tablas en la base de datos...")
+
+                        # Import data
+                        progress_text.text("Importando datos desde archivos CSV...")
                         import_csv_data()
-                        st.success("Datos importados correctamente")
+
+                        # Success message
+                        progress_text.empty()
+                        st.success("Datos importados correctamente a la base de datos SQLite.")
+                        st.info("Ahora puedes navegar a las otras páginas para ver los datos.")
                     except Exception as e:
                         st.error(f"Error importando datos: {e}")
+                        st.info("Asegúrate de que los archivos CSV estén en la carpeta 'data' y tengan el formato correcto.")
