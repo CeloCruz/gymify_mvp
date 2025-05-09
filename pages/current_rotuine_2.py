@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from streamlit_dashboard.utils.datawrangling_dashboard import preprocess_routine_history, rep_concatenate, filter_by_routine
+from utils.datawrangling_dashboard import preprocess_routine_history, rep_concatenate, filter_by_routine
 from utils.data_loader import load_and_prepare_data, load_data
 from utils.rm_calculator import calculate_1rm
 from st_aggrid import AgGrid, GridOptionsBuilder
