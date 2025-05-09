@@ -93,6 +93,30 @@ def build_routine_input_grid(df_template):
         custom_css=custom_css
     )
 
+def editable_dataframe(df_template, ejercicio):
+    if ejercicio in df_template['exercise'].values:
+        # Filter the DataFrame to only include the selected exercise
+        df_filtered = df_template[df_template['exercise'] == ejercicio,['exercise','reprange']].copy()
+        df_filtered['reps_real'] = 0
+        df_filtered['weight'] = 0
+        df_filtered['rir'] = 0
+    else:
+        default_rows = 4
+        df_filtered = pd.DataFrame(
+            {
+            'exercise': [ejercicio] * default_rows,
+            'reprange': [np.nan] * default_rows,
+            'reps_real': [0] * default_rows, 
+            'weight': [0] * default_rows, 
+            'rir': [0] * default_rows}
+        )
+
+        df_filtered.rename(columns={'exercise':'Ejercicio','reprange':'Rango'}, inplace=True)
+    
+    edited_df = st.data_editor(df_filtered, disabled=('Ejercicio','Rango'))
+
+    return edited_df
+
 def run_1rm_calculator():
     """
     Streamlit UI to calculate 1RM based on one or two sets.
@@ -166,6 +190,12 @@ def main():
                 "data/Fitness Personal - Routines.csv",
                 snake_case=True
             )
+        
+        exercises = load_and_prepare_data(
+            table_name="exercises",
+            user_id=user_id,
+            snake_case=True
+        )
 
     except Exception as e:
         st.error(f"Error cargando datos: {e}")
@@ -203,7 +233,12 @@ def main():
     routine_template_filtered = filter_by_routine(routine_template, selected_routine, 'routine')
     routine_template_filtered = routine_template_filtered[['exercise', 'rep_t_min', 'rep_t_max']].copy()
     routine_template_filtered = rep_concatenate(routine_template_filtered, "rep_t_min", "rep_t_max").reset_index(drop=True)
+    exercises_template = routine_template_filtered.exercise.unique()
     st.caption("Ingrese los nuevos datos para cada ejercicio")
+
+    for exercise_template in exercises_template:
+        exercise_selection = st.selectbox("Selecciona el ejercicio", exercises, key=exercise_template)
+        edited_df = editable_dataframe(routine_template_filtered, exercise_selection)
 
     grid_response = build_routine_input_grid(routine_template_filtered)
     edited_df = grid_response['data']

@@ -2,6 +2,17 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 
+weight_body_exercises = [
+    'Chin-ups', 
+    'Parallel bar dips',
+    'Pull-ups',
+    'Muscle-ups',
+    'Neutral grip pull-ups',
+    'Ring chin-ups',
+    'Parallel bar dips 210',
+    'Barbell squat'
+    ]
+
 def filter_by_routine(df, routine, routine_col="routine"):
     """
     Filters a DataFrame to return only rows matching the selected routine.
@@ -38,7 +49,12 @@ def order_historial(df):
 
     return df.sort_values(by=sort_cols, ascending=ascending)
 
-def rep_concatenate(df, repmin_col: str = "repmin", repmax_col: str = "repmax"):
+def rep_concatenate(df, 
+                    repmin_col: str = "repmin", 
+                    repmax_col: str = "repmax", 
+                    exercise_col: str = 'exercise',
+                    drop=True, 
+                    weight_body_exercises: list = weight_body_exercises):
     """
     Combines min and max rep values into a single 'reprange' column for readability.
     Handles Myo/Dropset tags and gracefully deals with missing or malformed data.
@@ -57,15 +73,26 @@ def rep_concatenate(df, repmin_col: str = "repmin", repmax_col: str = "repmax"):
 
     try:
         df["reprange"] = np.where(
-            df[repmin_col].isin(['Myo', 'Dropset']),
-            df[repmin_col],
-            np.where(
-                (df[repmin_col] != -1) & (df[repmax_col].notnull()),
-                df[repmin_col].apply(format_number) + " - " + df[repmax_col].apply(format_number),
-                np.where(df[repmin_col].isnull(), df[repmin_col], 'Dropset')
-            )
-        )
-        df.drop(columns=[repmin_col, repmax_col], inplace=True)
+                        (df[repmin_col].isin(['Myo', 'Dropset'])) | (df[repmin_col].isnull()),
+                        df[repmin_col],
+                            np.where(
+                            (df[repmin_col] == -1) & (df[exercise_col].isin(weight_body_exercises)),
+                            'AMRAP',
+                                np.where(
+                                (df[repmin_col] == -1) & (~df[exercise_col].isin(weight_body_exercises)),
+                                'Dropset',
+                                    np.where(
+                                    df[repmax_col].isnull(),
+                                    df[repmin_col].apply(format_number),
+                                        df[repmin_col].apply(format_number) + " - " + df[repmax_col].apply(format_number)
+                                    )
+                                )
+      
+                            )
+                        )
+                                
+        if drop:
+            df.drop(columns=[repmin_col, repmax_col], inplace=True)
     except Exception as e:
         st.error(f"Error concatenating rep range: {e}")
     return df

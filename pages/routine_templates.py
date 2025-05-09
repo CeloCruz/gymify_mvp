@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from utils.data_loader import load_and_prepare_data
-from utils.datawrangling import filter_by_routine, rep_concatenate
+from streamlit_dashboard.utils.datawrangling_dashboard import filter_by_routine, rep_concatenate
 
 st.set_page_config(page_title="Plantillas de Rutinas", layout="wide")
 
