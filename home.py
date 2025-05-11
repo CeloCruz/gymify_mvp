@@ -10,7 +10,7 @@ from pathlib import Path
 # Add parent directory to path so we can import auth modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from auth.authenticator import check_authentication, logout_button, init_auth_tables
-from database.db_setup import create_database, import_csv_data
+from streamlit_dashboard.archive.db_setup import create_database, import_csv_data
 
 # Initialize database and auth tables if they don't exist
 try:

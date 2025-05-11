@@ -104,15 +104,10 @@ def login_page():
 
     # Display login form - handle different versions of streamlit-authenticator
     try:
-        # For newer versions
-        name, authentication_status, username = authenticator.login("Login")
-    except ValueError:
-        try:
-            # For older versions that require a location
-            name, authentication_status, username = authenticator.login("Login", "main")
-        except Exception as e:
-            st.error(f"Authentication error: {e}")
-            return None, None, None, authenticator
+        name, authentication_status, username = authenticator.login("Login", "main")
+    except Exception as e:
+        st.error(f"Authentication error: {e}")
+        return None, None, None, authenticator
 
     # Handle authentication status
     if authentication_status == True:

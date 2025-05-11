@@ -93,7 +93,7 @@ def build_routine_input_grid(df_template):
         custom_css=custom_css
     )
 
-def editable_dataframe(df_template, ejercicio):
+def editable_dataframe(df_template, ejercicio, idx):
     if ejercicio in df_template['exercise'].values:
         # Filter the DataFrame to only include the selected exercise
         df_filtered = df_template[df_template['exercise'] == ejercicio,['exercise','reprange']].copy()
@@ -113,7 +113,7 @@ def editable_dataframe(df_template, ejercicio):
 
         df_filtered.rename(columns={'exercise':'Ejercicio','reprange':'Rango'}, inplace=True)
     
-    edited_df = st.data_editor(df_filtered, disabled=('Ejercicio','Rango'))
+    edited_df = st.data_editor(df_filtered, disabled=('Ejercicio','Rango'), key=f"editor_{ejercicio}_{idx}")
 
     return edited_df
 
@@ -192,8 +192,7 @@ def main():
             )
         
         exercises = load_and_prepare_data(
-            table_name="exercises",
-            user_id=user_id,
+            table_name="exercise_muscles",
             snake_case=True
         )
 
@@ -235,10 +234,17 @@ def main():
     routine_template_filtered = rep_concatenate(routine_template_filtered, "rep_t_min", "rep_t_max").reset_index(drop=True)
     exercises_template = routine_template_filtered.exercise.unique()
     st.caption("Ingrese los nuevos datos para cada ejercicio")
+    print(exercises)
+    for i, exercise_template in enumerate(exercises_template):
+        print(f"Ejercicio {i+1}: {exercise_template}")
 
-    for exercise_template in exercises_template:
-        exercise_selection = st.selectbox("Selecciona el ejercicio", exercises, key=exercise_template)
-        edited_df = editable_dataframe(routine_template_filtered, exercise_selection)
+        idx_exercise = exercises[exercises.id_exercise == exercise_template].index[0]
+        exercise_selection = st.selectbox("Selecciona el ejercicio", 
+                                          options=exercises, 
+                                          index=idx_exercise, 
+                                          key=f'selectbox_exercise_{i}',
+                                          label_visibility="hidden")
+        edited_df = editable_dataframe(routine_template_filtered, exercise_selection, idx=i)
 
     grid_response = build_routine_input_grid(routine_template_filtered)
     edited_df = grid_response['data']

@@ -1,7 +1,39 @@
 import sqlite3
 import pandas as pd
 from pathlib import Path
+from sqlalchemy import create_engine
+import pymysql
 
+# ///////////////////// MySQL Database Connection ////////////////////
+def get_db_connection():
+    """Get a SQLAlchemy engine connection to the MySQL database"""
+    # Parámetros de conexión
+    engine = create_engine("mysql+pymysql://admin:Macs.991014.@localhost/fitnessdb")
+    conn = engine.connect()
+    return conn
+
+def execute_query(query, params=(), fetchall=True):
+    """Execute a query and return results (MySQL-compatible)"""
+    conn = get_db_connection()
+    result = conn.execute(query, params)
+
+    if fetchall:
+        results = result.fetchall()
+    else:
+        conn.commit()
+        results = None
+
+    conn.close()
+    return results
+
+def query_to_dataframe(query, params=()):
+    """Execute a query and return results as a pandas DataFrame"""
+    conn = get_db_connection()
+    df = pd.read_sql_query(query, conn, params=params)
+    conn.close()
+    return df
+
+# //////////////////// SQLite Database Connection ////////////////////
 def get_db_connection():
     """Get a connection to the SQLite database"""
     # Use absolute path for Streamlit Cloud compatibility
