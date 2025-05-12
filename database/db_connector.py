@@ -1,30 +1,28 @@
-import sqlite3
 import pandas as pd
 from pathlib import Path
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 import pymysql
+import os
+from dotenv import load_dotenv
+
+# Cargar .env con ruta absoluta desde la raíz del proyecto
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 # ///////////////////// MySQL Database Connection ////////////////////
 def get_db_connection():
-    """Get a SQLAlchemy engine connection to the MySQL database"""
-    # Parámetros de conexión
-    engine = create_engine("mysql+pymysql://admin:Macs.991014.@localhost/fitnessdb")
-    conn = engine.connect()
-    return conn
+    connection_string = os.getenv("MY_SQL_CONNECTION")
+    if not connection_string:
+        raise ValueError("❌ MY_SQL_CONNECTION no está definido en el entorno.")
+    print("🔍 Conexión detectada:", connection_string)
+    engine = create_engine(connection_string)
+    return engine.connect()
 
 def execute_query(query, params=(), fetchall=True):
-    """Execute a query and return results (MySQL-compatible)"""
     conn = get_db_connection()
-    result = conn.execute(query, params)
-
-    if fetchall:
-        results = result.fetchall()
-    else:
-        conn.commit()
-        results = None
-
+    df = pd.read_sql_query(text(query), conn, params=params)
     conn.close()
-    return results
+    return df
 
 def query_to_dataframe(query, params=()):
     """Execute a query and return results as a pandas DataFrame"""
@@ -33,9 +31,23 @@ def query_to_dataframe(query, params=()):
     conn.close()
     return df
 
+def insert_data(table, data_dict):
+    """Insert a row of data into a table"""
+    conn = get_db_connection()
+    columns = ', '.join(data_dict.keys())
+    placeholders = ', '.join([f":{key}" for key in data_dict.keys()])
+    query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+    result = conn.execute(text(query), data_dict)
+    conn.commit()
+    last_id = result.lastrowid
+    conn.close()
+    return last_id
+
 # //////////////////// SQLite Database Connection ////////////////////
+"""
+Archived.
 def get_db_connection():
-    """Get a connection to the SQLite database"""
+    #Get a connection to the SQLite database
     # Use absolute path for Streamlit Cloud compatibility
     db_dir = Path(__file__).parent
     db_path = db_dir / "fitness_tracker.db"
@@ -49,7 +61,7 @@ def get_db_connection():
     return conn
 
 def execute_query(query, params=(), fetchall=True):
-    """Execute a query and return results"""
+    #Execute a query and return results
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(query, params)
@@ -64,14 +76,14 @@ def execute_query(query, params=(), fetchall=True):
     return results
 
 def query_to_dataframe(query, params=()):
-    """Execute a query and return results as a pandas DataFrame"""
+    #Execute a query and return results as a pandas DataFrame
     conn = get_db_connection()
     df = pd.read_sql_query(query, conn, params=params)
     conn.close()
     return df
 
 def insert_data(table, data_dict):
-    """Insert a row of data into a table"""
+    #Insert a row of data into a table
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -89,7 +101,7 @@ def insert_data(table, data_dict):
     return last_id
 
 def update_data(table, data_dict, condition_dict):
-    """Update rows in a table that match the condition"""
+    #Update rows in a table that match the condition
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -106,3 +118,4 @@ def update_data(table, data_dict, condition_dict):
     conn.close()
 
     return rows_affected
+"""

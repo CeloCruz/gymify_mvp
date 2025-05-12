@@ -19,7 +19,7 @@ _user_ids = {}
 def get_user_credentials():
     """Get user credentials from the database"""
     conn = get_db_connection()
-    users = execute_query("SELECT id, username, name, email, password FROM users")
+    users = execute_query("SELECT id_user, username, name, email, password FROM users")
 
     credentials = {
         "usernames": {}
@@ -28,13 +28,13 @@ def get_user_credentials():
     # Also create a mapping of usernames to user IDs
     user_ids = {}
 
-    for user in users:
+    for _, user in users.iterrows():
         credentials["usernames"][user["username"]] = {
             "name": user["name"],
             "email": user["email"],
             "password": user["password"]
         }
-        user_ids[user["username"]] = user["id"]
+        user_ids[user["username"]] = user["id_user"]
 
     return credentials, user_ids
 
