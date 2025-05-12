@@ -1,11 +1,36 @@
 import pandas as pd
 import sys
 import os
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
 from pathlib import Path
+import streamlit as st
 
 # Add parent directory to path so we can import database modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database.db_connector import query_to_dataframe
+
+@st.cache_data
+def load_dim_data():
+    engine = create_engine(os.getenv("MY_SQL_CONNECTION"))
+
+    sql_exercises = pd.read_sql("SELECT * FROM exercises", con=engine)
+    sql_pattern = pd.read_sql("SELECT * FROM movement_pattern", con=engine)
+    sql_roles = pd.read_sql("SELECT * FROM rol_names", con=engine)
+    sql_pattern_muscle_rol = pd.read_sql("SELECT * FROM pattern_muscle_rol", con=engine)
+    sql_equipments = pd.read_sql("SELECT * FROM equipments", con=engine)
+    sql_muscles = pd.read_sql("SELECT * FROM muscles", con=engine)
+    sql_exercise_muscle_rol = pd.read_sql("SELECT * FROM exercise_muscle_roles", con=engine)
+
+    return {
+        "exercises": sql_exercises,
+        "patterns": sql_pattern,
+        "roles": sql_roles,
+        "pattern_muscle_rol": sql_pattern_muscle_rol,
+        "equipments": sql_equipments,
+        "muscles": sql_muscles,
+        "exercise_muscle_roles": sql_exercise_muscle_rol,
+    }    
 
 def load_data(aggregated_path=None, muscles_path=None, user_id=None):
     """

@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import streamlit as st
 
 def calculate_1rm(weight1, reps1, rir1=0, weight2=None, reps2=None, rir2=0):
     """
@@ -56,3 +57,47 @@ def calculate_1rm(weight1, reps1, rir1=0, weight2=None, reps2=None, rir2=0):
 
     return one_rm, rep_max_table
 
+def run_1rm_calculator():
+    """
+    Streamlit UI to calculate 1RM based on one or two sets.
+    Includes validations and recommendations for better estimations.
+    """
+    weight1 = st.number_input("Peso Usado:", value=0.0, key="weight1")
+    reps1 = st.number_input("Repeticiones Hechas:", value=0, step=1, key="reps1")
+    if reps1 > 6:
+        st.warning("Usa levantamientos de fuerza (menos de 6 reps) para una mejor estimación.")
+    rir1 = st.number_input("RIR:", value=0, step=1, key="rir1")
+    use_bodyweight = st.checkbox("¿Tu peso formó parte del total levantado?", key="use_bodyweight")
+
+    kg_peso = 0
+    if use_bodyweight:
+        kg_peso = st.number_input("Introduce tu peso en kg.:", value=70, key="kg_peso")
+        weight1 += kg_peso
+
+    use_second_set = st.checkbox("Añadir otro set para mejorar estimación", key="use_second_set")
+    weight2, reps2, rir2 = None, None, None
+
+    if use_second_set:
+        weight2 = st.number_input("Peso Usado:", value=100, key="weight2")
+        reps2 = st.number_input("Repeticiones Hechas:", value=5, step=1, key="reps2")
+        if reps2 > 6:
+            st.warning("Usa levantamientos de fuerza (menos de 6 reps) para una mejor estimación.")
+        rir2 = st.number_input("RIR:", value=0, step=1, key="rir2")
+        if use_bodyweight:
+            weight2 += kg_peso
+
+    if st.button("Calcular"):
+        try:
+            result = calculate_1rm(weight1, reps1, rir1, weight2, reps2, rir2)
+            one_rm = result[0]
+            rep_max_table = result[1]
+
+            if use_bodyweight:
+                one_rm -= kg_peso
+                rep_max_table = rep_max_table - kg_peso
+
+            st.success(f"Peso máximo a 1 repetición (1RM) -> {one_rm:.1f} kg.")
+            st.write("Peso máximo según número de repeticiones:")
+            st.dataframe(rep_max_table)
+        except ValueError as e:
+            st.error(f"Error: {e}")

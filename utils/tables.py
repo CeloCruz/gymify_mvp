@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import streamlit as st
 
 def simple_locale_format(val, fmt="{:,.0f}"):
@@ -188,3 +189,67 @@ def display_summary_table(df, group_col, title, custom_formats: dict = None):
     st.subheader(title)
     st.dataframe(styled)
 
+def process_historical_routine(df):
+    """
+    Process the historical routine DataFrame to prepare it for display.
+    Renames columns, formats dates, and calculates height for display.
+    """
+    new_columns = {
+        'fecha':'Fecha',
+        'exercise':'Ejercicio',
+        'reprange':'Rango',
+        'repreal':'Reps',
+        'weight':'Peso',
+        'rir':'RIR'
+    }
+    df.rename(columns=new_columns, inplace=True)
+    df['Fecha'] = df['Fecha'].dt.strftime('%Y-%m-%d')
+    columns_to_show = ['Ejercicio','Rango','Reps','Peso','RIR']
+    columns_to_show = [col for col in columns_to_show if col in df.columns]
+
+    row_height = 35  # Approx row height in pixels
+    num_rows = df.shape[0]
+    height = 100 + num_rows * row_height  # 100 for header padding
+
+    return df, columns_to_show, height
+
+def editable_dataframe(df_template, ejercicio, idx):
+    """
+    Create an editable DataFrame for a specific exercise.
+    If the exercise is not found in the template, create a default DataFrame.
+
+    Parameters:
+        df_template (pd.DataFrame): The template DataFrame containing exercise data.
+        ejercicio (str): The selected exercise.
+        idx (int): The index of the exercise in the template.
+    Returns:
+        pd.DataFrame: An editable DataFrame for the selected exercise.
+    """
+    if ejercicio in df_template['exercise'].values:
+        # Filter the DataFrame to only include the selected exercise
+        df_filtered = df_template.loc[df_template['exercise'] == ejercicio,['exercise','reprange']].copy()
+        df_filtered['reps_real'] = 0
+        df_filtered['weight'] = 0
+        df_filtered['rir'] = 0
+    else:
+        default_rows = 4
+        df_filtered = pd.DataFrame(
+            {
+            'exercise': [ejercicio] * default_rows,
+            'reprange': [np.nan] * default_rows,
+            'reps_real': [0] * default_rows, 
+            'weight': [0] * default_rows, 
+            'rir': [0] * default_rows}
+        )
+    new_names = {
+        'exercise':'Ejercicio',
+        'reprange':'Rango',
+        'reps_real':'Reps',
+        'weight':'Peso',
+        'rir':'RIR'
+    }
+    df_filtered.rename(columns=new_names, inplace=True)
+    
+    edited_df = st.data_editor(df_filtered, disabled=('Ejercicio','Rango'), key=f"editor_{ejercicio}_{idx}")
+
+    return edited_df
